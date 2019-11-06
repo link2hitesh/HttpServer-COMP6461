@@ -13,7 +13,6 @@ import java.io.OutputStream;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.util.Date;
 
 /**
  * * HTTP server in java ServerSocket and Socket class.
@@ -37,14 +36,13 @@ public class Https extends Thread {
 		this.clientSocket = clientSocket;
 	}
 
-	private void printlog(String message) {
+	private static void printlog(String message) {
 		if (debugMode) {
 			System.out.println(message);
 		}
 	}
 
 	public void response() {
-		Date d = new Date();
 		try {
 			OutputStream os = this.clientSocket.getOutputStream();
 			DataOutputStream outputStream = new DataOutputStream(os);
@@ -80,6 +78,7 @@ public class Https extends Thread {
 		}
 		fileUrl = fileUrl.replace('/', '\\');
 		if (fileUrl.contains(fileDirectory)) {
+			printlog("Accessing URL - " + fileUrl);
 			return true;
 		} else {
 			responseStatus = "HTTP/1.1 401 UNAUTHORIZED ACCESS\r\n";
@@ -88,6 +87,7 @@ public class Https extends Thread {
 	}
 
 	private void listFilesName() {
+		printlog("Fetching list of files names at - " + this.fileUrl);
 		File folder = new File(this.fileUrl);
 		File[] files = folder.listFiles();
 		if (files != null) {
@@ -95,13 +95,16 @@ public class Https extends Thread {
 				for (final File fileEntry : files) {
 					if (!fileEntry.isDirectory()) {
 						this.fileNames = this.fileNames + fileEntry.getName() + "\r\n";
+						printlog("Files presents - " + this.fileNames);
 					}
 				}
 			} else {
 				this.fileNames = "No files in the directory\r\n";
+				printlog("No files in the directory.");
 			}
 
 		} else {
+			printlog("DIRECTORY NOT FOUND.");
 			responseStatus = "HTTP/1.1 404 DIRECTORY NOT FOUND\r\n";
 		}
 	}
@@ -109,17 +112,20 @@ public class Https extends Thread {
 	public synchronized void saveFileContent(String inlineData) {
 		// writes the contents
 		try {
+			printlog("Saving data in file - " + this.fileUrl);
 			FileWriter file = new FileWriter(this.fileUrl, true);
 			BufferedWriter bufferedWriter = new BufferedWriter(file);
 			bufferedWriter.append(System.lineSeparator() + inlineData);
 			bufferedWriter.close();
 		} catch (IOException e) {
+			printlog("Saving unsuccessful");
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 	}
 
 	public synchronized void getFileContent() {
+		printlog("Fetching content of file - " + this.fileUrl);
 		// This will reference one line at a time
 		String line = null;
 		// String inlineData = null;
@@ -139,18 +145,19 @@ public class Https extends Thread {
 			// Always close files.
 			bufferedReader.close();
 		} catch (FileNotFoundException e) {
+			printlog("file not found");
 			responseStatus = "HTTP/1.1 404 FILE NOT FOUND\r\n";
 			e.printStackTrace();
 		} catch (IOException e) {
+			printlog("file reading error");
 			responseStatus = "HTTP/1.1 410 FILE READING ERROR\r\n";
 			e.printStackTrace();
 		}
 	}
 
 	public void run() {
-		System.out.println("The Client details: InetAddress - " + clientSocket.getInetAddress() + " , port - "
+		printlog("The Client details: InetAddress - " + clientSocket.getInetAddress() + " , port - "
 				+ clientSocket.getPort());
-		Date d = new Date();
 		String requestType;
 		String url;
 		try {
@@ -167,7 +174,13 @@ public class Https extends Thread {
 			url = url.substring(url.indexOf("/"), url.length());
 
 			// Check for unauthorized access
+			printlog("Validating for unauthorized access.");
 			boolean validation = validateUrl(url);
+			if (validation) {
+				printlog("Access Authorized.");
+			} else {
+				printlog("Access Unauthorized.");
+			}
 
 			// code to read headers line
 			// code to read and print headers
@@ -186,7 +199,7 @@ public class Https extends Thread {
 			while (inputBufferedReader.ready()) {
 				payload.append((char) inputBufferedReader.read());
 			}
-			System.out.println("Payload data is: " + payload.toString());
+			// System.out.println("Payload data is: " + payload.toString());
 
 			if (validation) {
 				switch (requestType.trim().toUpperCase()) {
@@ -237,6 +250,7 @@ public class Https extends Thread {
 			Socket clientSocket = server.accept();
 			if (clientSocket != null) {
 				// new thread for each connection
+				printlog("Creating new request thread.");
 				new Https(clientSocket).start();
 			}
 		}
