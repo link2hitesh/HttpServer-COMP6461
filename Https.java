@@ -44,6 +44,7 @@ public class Https extends Thread {
 
 	public void response() {
 		try {
+			printlog("sending response");
 			OutputStream os = this.clientSocket.getOutputStream();
 			DataOutputStream outputStream = new DataOutputStream(os);
 			outputStream.writeBytes(this.responseStatus);
@@ -95,7 +96,6 @@ public class Https extends Thread {
 				for (final File fileEntry : files) {
 					if (!fileEntry.isDirectory()) {
 						this.fileNames = this.fileNames + fileEntry.getName() + "\r\n";
-						printlog("Files presents - " + this.fileNames);
 					}
 				}
 			} else {
@@ -156,6 +156,7 @@ public class Https extends Thread {
 	}
 
 	public void run() {
+		this.fileUrl = fileDirectory;
 		printlog("The Client details: InetAddress - " + clientSocket.getInetAddress() + " , port - "
 				+ clientSocket.getPort());
 		String requestType;
@@ -196,8 +197,13 @@ public class Https extends Thread {
 
 			// fetch other details from request
 			StringBuilder payload = new StringBuilder();
+			char temp;
 			while (inputBufferedReader.ready()) {
-				payload.append((char) inputBufferedReader.read());
+				temp = (char) inputBufferedReader.read();
+				/*if(temp == '\r' || temp == '\n') {
+					payload.append(System.lineSeparator());
+				}*/
+				payload.append(temp);
 			}
 			// System.out.println("Payload data is: " + payload.toString());
 
@@ -206,6 +212,7 @@ public class Https extends Thread {
 				case "GET":
 					if (!url.trim().contains(".txt")) {
 						listFilesName();
+						printlog("Files presents - " + this.fileNames);
 					} else {
 						getFileContent();
 					}
@@ -229,15 +236,15 @@ public class Https extends Thread {
 		for (int i = 0; i < args.length; i++) {
 			if (args[i].equalsIgnoreCase("-v")) {
 				debugMode = true;
-				break;
+				continue;
 			}
 			if (args[i].equalsIgnoreCase("-p")) {
 				port = Integer.parseInt(args[i + 1]);
-				break;
+				continue;
 			}
 			if (args[i].equalsIgnoreCase("-d")) {
 				fileDirectory = args[i + 1];
-				break;
+				continue;
 			}
 		}
 
