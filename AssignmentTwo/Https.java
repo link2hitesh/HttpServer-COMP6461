@@ -19,25 +19,26 @@ import java.net.Socket;
  */
 public class Https extends Thread {
 	// server parameters
-	private static Boolean debugMode = false;
+	private static Boolean debug = false;
 	private static int port = 8080;
-	private static String fileDirectory = "D:\\Study\\Concordia\\NetworksFiles";
+	private static String directory = "C:\\Users\\hites\\OneDrive\\Desktop\\ConcordiaProject";
 
 	// client parameters
-	private Socket clientSocket;
+	private Socket clientSideSocket;
 	private String responseStatus = "HTTP/1.1 200 OK\r\n";
-	private String fileUrl = "D:\\Study\\Concordia\\NetworksFiles";
+	private String fileLocURL = "C:\\Users\\hites\\OneDrive\\Desktop\\ConcordiaProject";
 	private String fileNames = "";
 	private String fileContent = "";
-	private String headerContentType = "Content-Type:text/html";
-	private String headerContentDisposition = "";
+	private String ContentType = "Content-Type:text/html";
+	private String ContentDisposition = "";
 
-	private Https(Socket clientSocket) {
-		this.clientSocket = clientSocket;
+	private Https(Socket clientSocket)
+	{
+		this.clientSideSocket = clientSocket;
 	}
 
 	private static void printlog(String message) {
-		if (debugMode) {
+		if (debug) {
 			System.out.println(message);
 		}
 	}
@@ -45,41 +46,41 @@ public class Https extends Thread {
 	public void response() {
 		try {
 			printlog("sending response");
-			OutputStream os = this.clientSocket.getOutputStream();
-			DataOutputStream outputStream = new DataOutputStream(os);
-			outputStream.writeBytes(this.responseStatus);
-			if (this.headerContentType != null && this.headerContentType != "") {
-				outputStream.writeBytes(this.headerContentType + "\r\n");
+			OutputStream os = this.clientSideSocket.getOutputStream();
+			DataOutputStream dataOutputStream = new DataOutputStream(os);
+			dataOutputStream.writeBytes(this.responseStatus);
+			if (this.ContentType != null && this.ContentType != "") {
+				dataOutputStream.writeBytes(this.ContentType + "\r\n");
 			}
-			if (this.headerContentDisposition != null && this.headerContentDisposition != "") {
-				outputStream.writeBytes(this.headerContentDisposition + "\r\n");
+			if (this.ContentDisposition != null && this.ContentDisposition != "") {
+				dataOutputStream.writeBytes(this.ContentDisposition + "\r\n");
 			}
-			outputStream.writeBytes("\r\n");
+			dataOutputStream.writeBytes("\r\n");
 			if (this.fileNames != null && this.fileNames != "") {
-				outputStream.writeBytes(this.fileNames + "\r\n");
+				dataOutputStream.writeBytes(this.fileNames + "\r\n");
 			}
 			if (this.fileContent != null && this.fileContent != "") {
-				outputStream.writeBytes(this.fileContent + "\r\n");
+				dataOutputStream.writeBytes(this.fileContent + "\r\n");
 			}
-			clientSocket.close();
+			clientSideSocket.close();
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
 
 	}
 
-	public boolean validateUrl(String url) {
+	public boolean urlValidation(String url) {
 		String[] locs = url.trim().split("/");
 		for (String loc : locs) {
 			if ("..".equalsIgnoreCase(loc)) {
-				fileUrl = fileUrl.substring(0, fileUrl.lastIndexOf("\\"));
+				fileLocURL = fileLocURL.substring(0, fileLocURL.lastIndexOf("\\"));
 			} else {
-				fileUrl = fileUrl + "\\" + loc;
+				fileLocURL = fileLocURL + "\\" + loc;
 			}
 		}
-		fileUrl = fileUrl.replace('/', '\\');
-		if (fileUrl.contains(fileDirectory)) {
-			printlog("Accessing URL - " + fileUrl);
+		fileLocURL = fileLocURL.replace('/', '\\');
+		if (fileLocURL.contains(directory)) {
+			printlog("Accessing URL - " + fileLocURL);
 			return true;
 		} else {
 			responseStatus = "HTTP/1.1 401 UNAUTHORIZED ACCESS\r\n";
@@ -88,8 +89,8 @@ public class Https extends Thread {
 	}
 
 	private void listFilesName() {
-		printlog("Fetching list of files names at - " + this.fileUrl);
-		File folder = new File(this.fileUrl);
+		printlog("Fetching list of files names at - " + this.fileLocURL);
+		File folder = new File(this.fileLocURL);
 		File[] files = folder.listFiles();
 		if (files != null) {
 			if (files.length > 0) {
@@ -112,8 +113,8 @@ public class Https extends Thread {
 	public synchronized void saveFileContent(String inlineData) {
 		// writes the contents
 		try {
-			printlog("Saving data in file - " + this.fileUrl);
-			FileWriter file = new FileWriter(this.fileUrl, true);
+			printlog("Saving data in file - " + this.fileLocURL);
+			FileWriter file = new FileWriter(this.fileLocURL, true);
 			BufferedWriter bufferedWriter = new BufferedWriter(file);
 			bufferedWriter.append(System.lineSeparator() + inlineData);
 			bufferedWriter.close();
@@ -125,13 +126,13 @@ public class Https extends Thread {
 	}
 
 	public synchronized void getFileContent() {
-		printlog("Fetching content of file - " + this.fileUrl);
+		printlog("Fetching content of file - " + this.fileLocURL);
 		// This will reference one line at a time
 		String line = null;
 		// String inlineData = null;
 		try {
 			// FileReader reads text files in the default encoding.
-			FileReader fileReader = new FileReader(this.fileUrl);
+			FileReader fileReader = new FileReader(this.fileLocURL);
 
 			// Always wrap FileReader in BufferedReader.
 			BufferedReader bufferedReader = new BufferedReader(fileReader);
@@ -156,14 +157,14 @@ public class Https extends Thread {
 	}
 
 	public void run() {
-		this.fileUrl = fileDirectory;
-		printlog("The Client details: InetAddress - " + clientSocket.getInetAddress() + " , port - "
-				+ clientSocket.getPort());
+		this.fileLocURL = directory;
+		printlog("The Client details: InetAddress - " + clientSideSocket.getInetAddress() + " , port - "
+				+ clientSideSocket.getPort());
 		String requestType;
 		String url;
 		try {
 			BufferedReader inputBufferedReader = new BufferedReader(
-					new InputStreamReader(this.clientSocket.getInputStream()));
+					new InputStreamReader(this.clientSideSocket.getInputStream()));
 			String[] request = inputBufferedReader.readLine().trim().split(" ");
 			requestType = request[0];
 			url = request[1];
@@ -176,7 +177,7 @@ public class Https extends Thread {
 
 			// Check for unauthorized access
 			printlog("Validating for unauthorized access.");
-			boolean validation = validateUrl(url);
+			boolean validation = urlValidation(url);
 			if (validation) {
 				printlog("Access Authorized.");
 			} else {
@@ -188,10 +189,10 @@ public class Https extends Thread {
 			String headerLine = null;
 			while ((headerLine = inputBufferedReader.readLine()).length() != 0) {
 				if (headerLine.contains("Content-Type")) {
-					this.headerContentType = headerLine.trim();
+					this.ContentType = headerLine.trim();
 				}
 				if (headerLine.contains("Content-Disposition")) {
-					this.headerContentDisposition = headerLine.trim();
+					this.ContentDisposition = headerLine.trim();
 				}
 			}
 
@@ -235,7 +236,7 @@ public class Https extends Thread {
 		// set servers parameters
 		for (int i = 0; i < args.length; i++) {
 			if (args[i].equalsIgnoreCase("-v")) {
-				debugMode = true;
+				debug = true;
 				continue;
 			}
 			if (args[i].equalsIgnoreCase("-p")) {
@@ -243,7 +244,7 @@ public class Https extends Thread {
 				continue;
 			}
 			if (args[i].equalsIgnoreCase("-d")) {
-				fileDirectory = args[i + 1];
+				directory = args[i + 1];
 				continue;
 			}
 		}
